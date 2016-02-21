@@ -1,9 +1,9 @@
 package com.qwertyness.networktablesclient;
 
-import java.io.File;
-import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Scanner;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import edu.wpi.first.wpilibj.networktables.NetworkTable;
 
@@ -15,18 +15,15 @@ public class NetworkTablesClient {
 
 	public static void main(String[] args) {
 		out = System.out;
-		try {
-			System.setOut(new PrintStream(File.createTempFile("log", "Catcher")));
-		} catch (IOException e) {}
 		Scanner scanner = new Scanner(System.in);
 		NetworkTable.setClientMode();
 		
-		out.println("Input IPv4 Address or mDNS");
+		out.println("Press enter or input alternate IP address.");
 		String ip = scanner.nextLine();
-		out.println(ip);
 		if (ip.split("\\.").length != 4 && !ip.contains(".local")) {
 			out.println("Invalid hostname.  Defaulted to roboRIO-4564-FRC.local");
 			ip = "roboRIO-4564-FRC.local";
+			out.println("Set hostname to mDNS roboRIO-4564-FRC.local");
 		}
 		NetworkTable.setIPAddress(ip);
 		
@@ -36,16 +33,14 @@ public class NetworkTablesClient {
 			scanner.close();
 			return;
 		}
-		
+		try {
+			Thread.sleep(1500);
+		} catch (InterruptedException e1) {}
 		startPushThread();
 		while(true) {
+			out.print(">");
 			String[] command = scanner.nextLine().split(" ");
 			if (command.length <= 1) {
-				if (command[0].equalsIgnoreCase("exit")) {
-					out.print("Closing...");
-					scanner.close();
-					return;
-				}
 				if (command[0].equalsIgnoreCase("getpid")) {
 					out.println("Current Values (P, I, D):");
 					out.println("Gyro: " + Values.gyroPID[0] + ", " + Values.gyroPID[1] + ", " + Values.gyroPID[2]);
@@ -62,9 +57,10 @@ public class NetworkTablesClient {
 					}
 				}
 				else {
-					out.print("Invalid Command!");
+					out.println("Invalid Command!");
 				}
 			}
+			try {
 			switch(command[0]) {
 				case "gp":
 					if (!diagnostic) {
@@ -128,34 +124,66 @@ public class NetworkTablesClient {
 					break;
 				case "p":
 					Values.platform = Integer.parseInt(command[1]);
+					if (Values.platform < 0 || Values.platform > 5) {
+						Values.platform = 0;
+						out.println("Invalid input number.  Defaulted to platform 0.");
+					}
 					out.println("Set starting platform to " + Values.platform);
+					sendAutonomousInformation();
 					break;
 				case "tp":
 					Values.targetPlatform = Integer.parseInt(command[1]);
+					if (Values.targetPlatform < 0 || Values.targetPlatform > 5) {
+						Values.targetPlatform = 0;
+						out.println("Invalid input number.  Defaulted to platform 0.");
+					}
 					out.println("Set target platform to " + Values.targetPlatform);
+					sendAutonomousInformation();
 					break;
 				case "d":
 					Values.defense = Integer.parseInt(command[1]);
-					out.println("Set defense type to " + Values.defense);
+					if (Values.defense < 0 || Values.defense > 9) {
+						Values.defense = 0;
+						out.println("Invalid input number.  Defaulted to defense 0.");
+					}
+					out.println("Set defense type to " + Values.translateName(Values.defense, 0));
+					sendAutonomousInformation();
 					break;
 				case "a":
 					Values.action = Integer.parseInt(command[1]);
-					out.println("Set selected action to " + Values.action);
+					if (Values.action < 0 || Values.action > 3) {
+						Values.action = 0;
+						out.println("Invalid input number.  Defaulted to action 0.");
+					}
+					out.println("Set selected action to " + Values.translateName(Values.action, 1));
+					sendAutonomousInformation();
 					break;
 			}
+			} catch(NumberFormatException e) {
+				out.println("Argument must be a valid number.");
+			}
 		}
+	}
+	
+	public static void sendAutonomousInformation() {
+		out.println();
+		out.println("----- Current Autonomous Selections -----");
+		out.println("p - Starting Platform: " + Values.platform);
+		out.println("tp - Target Platform: " + Values.targetPlatform);
+		out.println("d - Defense: " + Values.translateName(Values.defense, 0));
+		out.println("a - Action: " + Values.translateName(Values.action, 1));
+		out.println("-----------------------------------------");
+		out.println();
 	}
 	
 	public static void startPushThread() {
 		new PushThread();
 	}
 	
-	public static class PushThread implements Runnable {
-		public Thread thread;
+	public static class PushThread extends TimerTask {
 		
 		public PushThread() {
-			thread = new Thread(this, "pushThread");
-			thread.start();
+			new Timer().scheduleAtFixedRate(this, 0, 1000);
 		}
 		
 		public void run() {
@@ -171,9 +199,9 @@ public class NetworkTablesClient {
 				table.putNumber("gyroP", Values.gyroPID[0]);
 				table.putNumber("gyroI", Values.gyroPID[1]);
 				table.putNumber("gyroD", Values.gyroPID[2]);
-				table.putNumber("driveP", Values.drivePID[3]);
-				table.putNumber("driveI", Values.drivePID[4]);
-				table.putNumber("driveD", Values.drivePID[5]);
+				table.putNumber("driveP", Values.drivePID[0]);
+				table.putNumber("driveI", Values.drivePID[1]);
+				table.putNumber("driveD", Values.drivePID[2]);
 			}
 			else {
 				Values.gyroPID[0] = table.getNumber("gyroP", 0.0);
@@ -190,9 +218,7 @@ public class NetworkTablesClient {
 			try {
 				Thread.sleep(1000);
 			} catch (InterruptedException e) {e.printStackTrace();}
-			if (thread.isAlive()) {
-				run();
-			}
+			run();
 		}
 	}
 }
