@@ -39,14 +39,19 @@ public class NetworkTablesClient {
 		startPushThread();
 		while(true) {
 			out.print(">");
-			String[] command = scanner.nextLine().split(" ");
+			String commandAvecArgs = scanner.nextLine();
+			if (commandAvecArgs.length() < 1) {
+				sendAutonomousInformation();
+				continue;
+			}
+			String[] command = {commandAvecArgs.substring(0, 1), commandAvecArgs.substring(1)};
 			if (command.length <= 1) {
-				if (command[0].equalsIgnoreCase("getpid")) {
+				if (commandAvecArgs.contains("getpid")) {
 					out.println("Current Values (P, I, D):");
 					out.println("Gyro: " + Values.gyroPID[0] + ", " + Values.gyroPID[1] + ", " + Values.gyroPID[2]);
 					out.println("Drive: " + Values.drivePID[0] + ", " + Values.drivePID[1] + ", " + Values.drivePID[2]);
 				}
-				else if (command[0].equalsIgnoreCase("diag")) {
+				else if (commandAvecArgs.contains("diag")) {
 					if (diagnosticReady) {
 						diagnostic = !diagnostic;
 						out.println("Set diagnostic mode to " + diagnostic);
@@ -57,7 +62,7 @@ public class NetworkTablesClient {
 					}
 				}
 				else {
-					out.println("Invalid Command!");
+					sendAutonomousInformation();
 				}
 			}
 			try {
@@ -122,7 +127,7 @@ public class NetworkTablesClient {
 					out.println("Current Values (P, I, D):");
 					out.println("Drive: " + Values.drivePID[0] + ", " + Values.drivePID[1] + ", " + Values.drivePID[2]);
 					break;
-				case "p":
+				case "s":
 					Values.platform = Integer.parseInt(command[1]);
 					if (Values.platform < 0 || Values.platform > 5) {
 						Values.platform = 0;
@@ -131,7 +136,7 @@ public class NetworkTablesClient {
 					out.println("Set starting platform to " + Values.platform);
 					sendAutonomousInformation();
 					break;
-				case "tp":
+				case "t":
 					Values.targetPlatform = Integer.parseInt(command[1]);
 					if (Values.targetPlatform < 0 || Values.targetPlatform > 5) {
 						Values.targetPlatform = 0;
@@ -158,6 +163,9 @@ public class NetworkTablesClient {
 					out.println("Set selected action to " + Values.translateName(Values.action, 1));
 					sendAutonomousInformation();
 					break;
+				default:
+					sendAutonomousInformation();
+					break;
 			}
 			} catch(NumberFormatException e) {
 				out.println("Argument must be a valid number.");
@@ -168,10 +176,10 @@ public class NetworkTablesClient {
 	public static void sendAutonomousInformation() {
 		out.println();
 		out.println("----- Current Autonomous Selections -----");
-		out.println("p - Starting Platform: " + Values.platform);
-		out.println("tp - Target Platform: " + Values.targetPlatform);
+		out.println("s - Starting Platform: " + Values.platform);
 		out.println("d - Defense: " + Values.translateName(Values.defense, 0));
 		out.println("a - Action: " + Values.translateName(Values.action, 1));
+		out.println("t - Target Platform: " + Values.targetPlatform);
 		out.println("-----------------------------------------");
 		out.println();
 	}

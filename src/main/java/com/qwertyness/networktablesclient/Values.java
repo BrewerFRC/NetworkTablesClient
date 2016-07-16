@@ -12,7 +12,7 @@ public class Values {
 		if (type == 0) {
 			switch(value) {
 				case 1: return "Low Bar";
-				case 2: return "Cheval de Fris";
+				case 2: return "Cheval de Frise";
 				case 3: return "Moat";
 				case 4: return "Ramparts";
 				case 5: return "Drawbridge";
@@ -27,8 +27,8 @@ public class Values {
 			switch(value) {
 				case 0: return "Stop.";
 				case 1: return "U-turn.";
-				case 2: return "Approach Tower";
-				case 3: return "Approach and shoot.";
+				case 2: return "Approach and shoot.";
+				case 3: return "Approach Tower";
 			}
 		}
 		return new Integer(value).toString();
